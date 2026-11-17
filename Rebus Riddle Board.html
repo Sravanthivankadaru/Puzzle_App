@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rebus Riddle Board</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,800&family=Atkinson+Hyperlegible:wght@400;700&family=Archivo+Black&display=swap">
+<style>
+/* Layout: a game board — header with level switch, then a wrapping grid of puzzle cards (tile → Reveal → answer). */
+:root {
+  --bg: #eef1f6;
+  --surface: #ffffff;
+  --ink: #18223a;
+  --muted: #5b6680;
+  --line: #d3d9e6;
+  --tile: #fff6d6;
+  --tile-ink: #141414;
+  --tile-edge: #18223a;
+  --accent: #e2457a;
+  --accent-ink: #ffffff;
+  --answer-bg: #18223a;
+  --answer-ink: #f5f7fb;
+  --good: #1f8a5b;
+  --good-bg: #e3f5ec;
+  --bad: #d23434;
+  --bad-bg: #fde8e8;
+  --f-display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --f-body: "Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+  --f-tile: "Archivo Black", "Arial Black", Impact, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #11162a; --surface: #1a2140; --ink: #eef1f8; --muted: #a3acc6; --line: #2d3760;
+    --tile: #fff3c4; --tile-ink: #141414; --tile-edge: #f0b54a;
+    --accent: #ff6b98; --accent-ink: #1a0a12; --answer-bg: #0b0f1f; --answer-ink: #f5f7fb; --good: #4fd394;
+    --good-bg: #14352a; --bad: #ff6b6b; --bad-bg: #3a1a22;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #11162a; --surface: #1a2140; --ink: #eef1f8; --muted: #a3acc6; --line: #2d3760;
+  --tile: #fff3c4; --tile-ink: #141414; --tile-edge: #f0b54a;
+  --accent: #ff6b98; --accent-ink: #1a0a12; --answer-bg: #0b0f1f; --answer-ink: #f5f7fb; --good: #4fd394;
+  --good-bg: #14352a; --bad: #ff6b6b; --bad-bg: #3a1a22;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { margin: 0; }
+body {
+  background: var(--bg); color: var(--ink); font-family: var(--f-body); font-size: 16px; line-height: 1.5;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 32px 56px;
+}
+.wrap { max-width: 1040px; margin: 0 auto; display: grid; gap: 28px; }
+header { display: grid; gap: 10px; }
+.eyebrow { font-size: 13px; letter-spacing: .12em; text-transform: uppercase; color: var(--accent); font-weight: 700; }
+h1 { font-family: var(--f-display); font-weight: 800; font-size: clamp(34px, 6vw, 56px); line-height: 1; margin: 0; text-wrap: balance; }
+.intro { color: var(--muted); max-width: 62ch; margin: 0; }
+.example { display: flex; gap: 16px; align-items: center; flex-wrap: wrap; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; }
+.example .mini { font-family: var(--f-tile); background: var(--tile); color: var(--tile-ink); border: 3px solid var(--tile-edge); border-radius: 6px; padding: 6px 14px; text-align: center; line-height: 1.15; font-size: 15px; }
+.example p { margin: 0; flex: 1 1 240px; min-width: 0; color: var(--muted); }
+.example b { color: var(--ink); }
+
+.bar { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; }
+.levels { display: inline-flex; background: var(--surface); border: 1px solid var(--line); border-radius: 999px; padding: 4px; gap: 4px; }
+.levels button {
+  font: 700 15px var(--f-body); border: 0; background: transparent; color: var(--muted);
+  padding: 9px 18px; border-radius: 999px; cursor: pointer;
+}
+.levels button[aria-selected="true"] { background: var(--ink); color: var(--bg); }
+.levels button:focus-visible, .reveal:focus-visible, .ghost:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.progress { display: flex; align-items: center; gap: 10px; font-size: 14px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.dots { display: flex; gap: 5px; }
+.dots i { width: 10px; height: 10px; border-radius: 50%; background: var(--line); display: block; transition: background .2s; }
+.dots i.on { background: var(--accent); }
+.ghost { font: 700 13px var(--f-body); background: none; border: 1px solid var(--line); color: var(--muted); padding: 6px 12px; border-radius: 8px; cursor: pointer; }
+
+.level-head { display: flex; gap: 12px; align-items: baseline; flex-wrap: wrap; }
+.level-head h2 { font-family: var(--f-display); font-weight: 800; font-size: 26px; margin: 0; }
+.level-head span { color: var(--muted); }
+
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 16px; display: grid; gap: 14px; align-content: start; }
+.card-top { display: flex; justify-content: space-between; font-size: 13px; color: var(--muted); letter-spacing: .08em; text-transform: uppercase; font-weight: 700; }
+.tile {
+  background: var(--tile); color: var(--tile-ink); border: 4px solid var(--tile-edge); border-radius: 8px;
+  min-height: 170px; display: grid; place-items: center; padding: 16px; font-family: var(--f-tile);
+  text-align: center; line-height: 1.1; overflow: hidden;
+}
+.reveal {
+  font: 700 16px var(--f-display); background: var(--accent); color: var(--accent-ink); border: 0;
+  border-radius: 10px; padding: 12px 16px; cursor: pointer; transition: transform .12s ease, filter .12s;
+}
+.reveal:hover { filter: brightness(1.06); }
+.reveal:active { transform: translateY(1px) scale(.99); }
+.reveal.done { background: transparent; color: var(--muted); border: 1px solid var(--line); }
+.answer { background: var(--answer-bg); color: var(--answer-ink); border-radius: 10px; padding: 14px 16px; display: grid; gap: 4px; animation: pop .35s ease both; }
+.answer strong { font-family: var(--f-display); font-size: 21px; font-weight: 800; }
+.answer span { font-size: 15px; opacity: .85; }
+@keyframes pop { from { transform: translateY(-6px); opacity: .3; } to { transform: none; opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .answer { animation: none; } .reveal { transition: none; } }
+
+/* puzzle internals */
+.stack { display: grid; gap: 6px; }
+.big { font-size: 34px; }
+.mid { font-size: 26px; }
+.row { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+.over { border-bottom: 3px solid var(--tile-ink); padding-bottom: 6px; }
+.lines { display: flex; justify-content: center; font-size: 30px; }
+.lines b { font-weight: inherit; padding: 0 5px; border-right: 3px solid var(--tile-ink); }
+.lines b:last-child { border-right: 0; }
+.box-wrap { position: relative; width: 170px; height: 120px; }
+.box-wrap .box { position: absolute; left: 34px; top: 30px; width: 100px; height: 72px; border: 4px solid var(--tile-ink); }
+.box-wrap .word { position: absolute; right: -6px; top: 0; font-size: 22px; }
+.tiny { font-size: 12px; vertical-align: middle; letter-spacing: .02em; }
+.gg { font-size: 19px; line-height: 1.35; }
+footer { color: var(--muted); font-size: 14px; text-align: center; }
+
+/* guess form */
+.guess { display: flex; gap: 8px; }
+.guess input {
+  flex: 1 1 auto; min-width: 0; font: 400 16px var(--f-body); color: var(--ink); background: var(--bg);
+  border: 2px solid var(--line); border-radius: 10px; padding: 10px 12px;
+}
+.guess input:focus-visible { outline: none; border-color: var(--ink); }
+.guess button {
+  font: 700 15px var(--f-display); background: var(--ink); color: var(--bg); border: 0; border-radius: 10px;
+  padding: 0 16px; cursor: pointer;
+}
+.guess button:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.card.correct { border-color: var(--good); box-shadow: 0 0 0 2px var(--good) inset; }
+.card.wrong { border-color: var(--bad); box-shadow: 0 0 0 2px var(--bad) inset; }
+.card.correct .guess input { border-color: var(--good); background: var(--good-bg); }
+.card.wrong .guess input { border-color: var(--bad); background: var(--bad-bg); }
+.verdict { font-weight: 700; font-size: 15px; margin: -4px 0 0; }
+.verdict.ok { color: var(--good); }
+.verdict.no { color: var(--bad); }
+.card.shake { animation: shake .35s ease; }
+@keyframes shake { 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
+@media (prefers-reduced-motion: reduce) { .card.shake { animation: none; } }
+
+/* kudos pop-up */
+.overlay { position: fixed; inset: 0; background: rgba(10, 14, 30, .55); display: grid; place-items: center; padding: 16px; z-index: 50; }
+.overlay[hidden], [hidden] { display: none !important; }
+.modal {
+  background: var(--surface); color: var(--ink); border-radius: 20px; padding: 28px 24px; max-width: 380px; width: 100%;
+  text-align: center; display: grid; gap: 12px; border: 4px solid var(--tile-edge); animation: pop .35s ease both;
+}
+.modal .burst { font-family: var(--f-tile); font-size: 15px; letter-spacing: .14em; color: var(--accent); }
+.modal h3 { font-family: var(--f-display); font-weight: 800; font-size: 34px; margin: 0; line-height: 1.05; }
+.modal p { margin: 0; color: var(--muted); }
+.modal .score { font-family: var(--f-display); font-weight: 800; font-size: 64px; line-height: 1; color: var(--accent); font-variant-numeric: tabular-nums; }
+.modal .score small { font-size: 28px; color: var(--muted); }
+.modal .breakdown { display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; }
+.modal .breakdown span { background: var(--bg); border: 1px solid var(--line); border-radius: 999px; padding: 4px 12px; font-size: 14px; font-variant-numeric: tabular-nums; }
+.scorechip { font-weight: 700; color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 999px; padding: 4px 12px; font-variant-numeric: tabular-nums; }
+.modal .actions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-top: 6px; }
+</style>
+
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="eyebrow">Picture word puzzles</div>
+    <h1>Rebus Riddle Board</h1>
+    <p class="intro">Each box hides a common word or phrase. Look at where the words sit, how big they are, and how many times they appear. Type your guess and press Check, or press Reveal if you're stuck.</p>
+    <div class="example">
+      <div class="mini">HEAD<br>HEELS</div>
+      <p><b>Example:</b> HEAD sits over HEELS, so the answer is <b>Head over heels</b>.</p>
+    </div>
+  </header>
+
+  <div class="bar">
+    <div class="levels" role="tablist" aria-label="Choose a level">
+      <button role="tab" id="tab-1" aria-selected="true" data-level="1">Level 1 · Easy</button>
+      <button role="tab" id="tab-2" aria-selected="false" data-level="2">Level 2 · Tricky</button>
+    </div>
+    <div class="progress">
+      <div class="dots" id="dots"></div>
+      <span id="count">0 of 5 played</span>
+      <span class="scorechip" id="scorechip">Score 0 / 10</span>
+      <button class="ghost" id="reset">Restart level</button>
+    </div>
+  </div>
+
+  <section>
+    <div class="level-head"><h2 id="level-title">Level 1</h2><span id="level-sub">Warm-up words</span></div>
+  </section>
+  <div class="grid" id="grid"></div>
+
+  <footer>Tip: say the position out loud. “Over”, “under”, “between” and “backwards” are usually part of the answer.</footer>
+</div>
+
+<div class="overlay" id="overlay" hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+    <div class="burst" id="modal-burst">★ LEVEL COMPLETE ★</div>
+    <h3 id="modal-title">Kudos!</h3>
+    <div class="score" id="modal-score" hidden></div>
+    <p id="modal-text">Try next level.</p>
+    <div class="breakdown" id="modal-breakdown" hidden></div>
+    <div class="actions">
+      <button class="reveal" id="modal-go">Try next level</button>
+      <button class="ghost" id="modal-close">Stay here</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const LEVELS = {
+  1: {
+    title: "Level 1", sub: "Warm-up words",
+    puzzles: [
+      { tile: '<div class="stack big"><div class="over">STAND</div><div>I</div></div>',
+        answer: "I understand", why: "The letter I is under the word STAND." },
+      { tile: '<div class="stack big"><div class="over">MIND</div><div>MATTER</div></div>',
+        answer: "Mind over matter", why: "MIND is placed over MATTER." },
+      { tile: '<div class="stack mid"><div>CYCLE</div><div>CYCLE</div><div>CYCLE</div></div>',
+        answer: "Tricycle", why: "Three (“tri”) cycles make a tricycle." },
+      { tile: '<div class="row big"><span>SIDE</span><span>SIDE</span></div>',
+        answer: "Side by side", why: "One SIDE sits right by the other SIDE." },
+      { tile: '<div class="stack big"><div class="over">MAN</div><div>BOARD</div></div>',
+        answer: "Man overboard", why: "MAN is over BOARD." }
+    ]
+  },
+  2: {
+    title: "Level 2", sub: "Look twice",
+    puzzles: [
+      { tile: '<div class="big">ECNALG</div>',
+        answer: "Backward glance", why: "GLANCE is spelled backwards." },
+      { tile: '<div class="stack gg"><div>GIVE GIVE GIVE GIVE</div><div>GET GET GET GET</div></div>',
+        answer: "Forgive and forget", why: "Four GIVEs and four GETs: for-give and for-get." },
+      { tile: '<div class="box-wrap" aria-label="The word THINK sits outside a drawn box"><div class="box"></div><div class="word">THINK</div></div>',
+        answer: "Think outside the box", why: "The word THINK is placed outside the box." },
+      { tile: '<div class="lines"><b>R</b><b>E</b><b>A</b><b>D</b><b>I</b><b>N</b><b>G</b></div>',
+        answer: "Reading between the lines", why: "The letters of READING are split by lines." },
+      { tile: '<div class="mid"><span class="tiny">world</span> ALL</div>',
+        answer: "It's a small world after all", why: "A small “world” comes first, with ALL after it." }
+    ]
+  }
+};
+
+/* Accepted answers (compared after removing punctuation, spaces and case). */
+const ALTS = {
+  1: [
+    ["i understand", "understand"],
+    ["mind over matter"],
+    ["tricycle", "a tricycle", "tri cycle"],
+    ["side by side"],
+    ["man overboard", "man over board"]
+  ],
+  2: [
+    ["backward glance", "backwards glance", "a backward glance"],
+    ["forgive and forget", "forgive & forget", "forgive n forget"],
+    ["think outside the box", "think outside of the box", "thinking outside the box"],
+    ["reading between the lines", "read between the lines"],
+    ["its a small world after all", "small world after all", "it is a small world after all", "a small world after all"]
+  ]
+};
+const norm = s => s.toLowerCase().replace(/&/g, "and").replace(/[^a-z0-9]/g, "");
+
+/* Key-word rules: a guess is right if it contains at least one word from EVERY group,
+   in any order. So "out of the box thinking" counts for "think outside the box". */
+const KEYS = {
+  1: [
+    [["understand", "understood", "under stand"]],
+    [["mind"], ["matter"]],
+    [["tricycle", "tri cycle", "tricycles", "three cycles"]],
+    [["side by side", "side-by-side"]],
+    [["man"], ["overboard", "over board"]]
+  ],
+  2: [
+    [["backward", "backwards", "reverse", "reversed"], ["glance", "glancing"]],
+    [["forgive", "forgiving", "for give"], ["forget", "forgetting", "for get"]],
+    [["think", "thinking", "thought"], ["outside", "out of"], ["box"]],
+    [["read", "reading"], ["between"], ["line", "lines"]],
+    [["small world"], ["after all"]]
+  ]
+};
+const words = s => " " + s.toLowerCase().replace(/&/g, " and ").replace(/[^a-z0-9]+/g, " ").trim() + " ";
+function isCorrect(l, i, guess) {
+  if (ALTS[l][i].some(a => norm(a) === norm(guess))) return true;
+  const g = words(guess);
+  return KEYS[l][i].every(group => group.some(w => g.includes(words(w))));
+}
+
+let level = 1;
+/* per puzzle: { guess, status: null|'correct'|'wrong', revealed } */
+const state = {};
+[1, 2].forEach(l => state[l] = LEVELS[l].puzzles.map(() => ({ guess: "", status: null, revealed: false })));
+const celebrated = { 1: false, 2: false };
+
+const grid = document.getElementById("grid");
+const dots = document.getElementById("dots");
+const count = document.getElementById("count");
+const overlay = document.getElementById("overlay");
+
+/* ---------- Sounds (Web Audio, nothing to download) ---------- */
+let ctx;
+function audio() {
+  ctx = ctx || new (window.AudioContext || window.webkitAudioContext)();
+  if (ctx.state === "suspended") ctx.resume();
+  return ctx;
+}
+function tone(c, freq, start, dur, { type = "triangle", vol = 0.2, endFreq } = {}) {
+  const o = c.createOscillator(), g = c.createGain();
+  o.type = type;
+  o.frequency.setValueAtTime(freq, start);
+  if (endFreq) o.frequency.exponentialRampToValueAtTime(endFreq, start + dur);
+  g.gain.setValueAtTime(0.0001, start);
+  g.gain.exponentialRampToValueAtTime(vol, start + 0.02);
+  g.gain.exponentialRampToValueAtTime(0.0001, start + dur);
+  o.connect(g).connect(c.destination);
+  o.start(start); o.stop(start + dur + 0.05);
+}
+function chime() {
+  try {
+    const c = audio(), now = c.currentTime;
+    [523.25, 659.25, 783.99, 1046.5].forEach((f, i) =>
+      tone(c, f, now + i * 0.07, 0.45, { type: i === 3 ? "sine" : "triangle", vol: 0.2 }));
+  } catch (e) {}
+}
+function clap() {
+  try {
+    const c = audio(), now = c.currentTime;
+    const len = Math.floor(c.sampleRate * 0.12);
+    const buf = c.createBuffer(1, len, c.sampleRate);
+    const d = buf.getChannelData(0);
+    for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 3);
+    // a small crowd: many quick claps over ~1.4s
+    for (let k = 0; k < 26; k++) {
+      const t = now + Math.random() * 1.4;
+      const s = c.createBufferSource(); s.buffer = buf;
+      s.playbackRate.value = 0.8 + Math.random() * 0.5;
+      const f = c.createBiquadFilter(); f.type = "bandpass"; f.frequency.value = 1000 + Math.random() * 1400; f.Q.value = 0.9;
+      const g = c.createGain(); g.gain.value = 0.35 + Math.random() * 0.35;
+      s.connect(f).connect(g).connect(c.destination);
+      s.start(t);
+    }
+  } catch (e) {}
+}
+function sad() {
+  try {
+    const c = audio(), now = c.currentTime;
+    // "wah wah wah wahhh"
+    [[392, 370], [370, 349], [349, 330], [330, 247]].forEach(([a, b], i) =>
+      tone(c, a, now + i * 0.32, i === 3 ? 0.8 : 0.3, { type: "sawtooth", vol: 0.09, endFreq: b }));
+  } catch (e) {}
+}
+function fanfare() {
+  try {
+    const c = audio(), now = c.currentTime;
+    const notes = [523.25, 659.25, 783.99, 1046.5, 783.99, 1046.5];
+    const times = [0, 0.12, 0.24, 0.36, 0.56, 0.68];
+    notes.forEach((f, i) => tone(c, f, now + times[i], i === 5 ? 0.9 : 0.2, { type: "square", vol: 0.08 }));
+    tone(c, 261.63, now + 0.68, 0.9, { type: "triangle", vol: 0.15 });
+  } catch (e) {}
+}
+
+/* ---------- Game ---------- */
+const played = s => s.status === "correct" || s.revealed;
+
+function render(focusId) {
+  const L = LEVELS[level];
+  document.getElementById("level-title").textContent = L.title;
+  document.getElementById("level-sub").textContent = L.sub;
+  document.querySelectorAll(".levels button").forEach(b =>
+    b.setAttribute("aria-selected", String(+b.dataset.level === level)));
+  grid.innerHTML = "";
+  L.puzzles.forEach((p, i) => {
+    const s = state[level][i];
+    const card = document.createElement("article");
+    card.className = "card" + (s.status ? " " + s.status : "") + (shakeKey === `${level}-${i}` ? " shake" : "");
+    const tag = s.status === "correct" ? "Solved" : s.revealed ? "Revealed" : "?";
+    const verdict = s.status === "correct" ? '<p class="verdict ok">Correct! Well done.</p>'
+                  : s.status === "wrong" ? '<p class="verdict no">Not quite. Try again.</p>' : "";
+    card.innerHTML = `
+      <div class="card-top"><span>Puzzle ${i + 1}</span><span>${tag}</span></div>
+      <div class="tile">${p.tile}</div>
+      <form class="guess" autocomplete="off">
+        <label class="sr" for="guess-${level}-${i}" hidden>Your answer for puzzle ${i + 1}</label>
+        <input id="guess-${level}-${i}" type="text" placeholder="Type your answer" aria-label="Your answer for puzzle ${i + 1}"
+          value="${s.guess.replace(/"/g, "&quot;")}" ${s.status === "correct" ? "readonly" : ""}>
+        <button type="submit" id="check-${level}-${i}" ${s.status === "correct" ? "disabled" : ""}>Check</button>
+      </form>
+      ${verdict}
+      <button class="reveal${s.revealed ? " done" : ""}" id="reveal-${level}-${i}">${s.revealed ? "Hide answer" : "Reveal"}</button>
+      ${s.revealed ? `<div class="answer"><strong>${p.answer}</strong><span>${p.why}</span></div>` : ""}`;
+
+    const input = card.querySelector("input");
+    input.addEventListener("input", () => { s.guess = input.value; });
+    card.querySelector("form").addEventListener("submit", e => {
+      e.preventDefault();
+      s.guess = input.value;
+      if (!s.guess.trim()) { input.focus(); return; }
+      const ok = isCorrect(level, i, s.guess);
+      s.status = ok ? "correct" : "wrong";
+      ok ? clap() : sad();
+      shakeKey = ok ? null : `${level}-${i}`;
+      render(ok ? `reveal-${level}-${i}` : `guess-${level}-${i}`);
+      checkDone();
+    });
+    card.querySelector(".reveal").addEventListener("click", () => {
+      s.revealed = !s.revealed;
+      if (s.revealed && s.status !== "correct") s.peeked = true;
+      if (s.revealed) chime();
+      render(`reveal-${level}-${i}`);
+      if (s.revealed) checkDone();
+    });
+    grid.appendChild(card);
+  });
+  const n = state[level].filter(played).length;
+  dots.innerHTML = state[level].map(s => `<i class="${played(s) ? "on" : ""}"></i>`).join("");
+  count.textContent = `${n} of ${L.puzzles.length} played`;
+  document.getElementById("scorechip").textContent = `Score ${totalScore()} / 10`;
+  shakeKey = null;
+  if (focusId) { const el = document.getElementById(focusId); if (el) { el.focus(); if (el.select && el.tagName === "INPUT") el.select(); } }
+}
+
+/* A point for each puzzle answered correctly before its answer was revealed. */
+const levelScore = l => state[l].filter(s => s.status === "correct" && !s.peeked).length;
+const totalScore = () => levelScore(1) + levelScore(2);
+let modalAction = null;
+/* Only the card that was just answered wrong shakes, and only once. */
+let shakeKey = null;
+
+function openModal({ burst, title, text, score, breakdown, go, action }) {
+  document.getElementById("modal-burst").textContent = burst;
+  document.getElementById("modal-title").textContent = title;
+  document.getElementById("modal-text").textContent = text;
+  const sc = document.getElementById("modal-score"), bd = document.getElementById("modal-breakdown");
+  sc.hidden = score == null; if (score != null) sc.innerHTML = score;
+  bd.hidden = !breakdown; if (breakdown) bd.innerHTML = breakdown;
+  document.getElementById("modal-go").textContent = go;
+  modalAction = action;
+  setTimeout(() => {
+    overlay.hidden = false;
+    fanfare();
+    document.getElementById("modal-go").focus();
+  }, 900);
+}
+
+function checkDone() {
+  if (celebrated[level] || !state[level].every(played)) return;
+  celebrated[level] = true;
+  const allDone = [1, 2].every(l => state[l].every(played));
+  if (allDone) {
+    const t = totalScore();
+    const msg = t === 10 ? "Perfect score! You're a rebus master."
+              : t >= 8 ? "Excellent! Sharp eyes and a quick mind."
+              : t >= 5 ? "Good job! You cracked more than half."
+              : "Nice try! Play again and beat your score.";
+    openModal({
+      burst: "★ GAME COMPLETE ★", title: "Kudos!", text: msg,
+      score: `${t}<small> / 10</small>`,
+      breakdown: `<span>Level 1: ${levelScore(1)} / 5</span><span>Level 2: ${levelScore(2)} / 5</span>`,
+      go: "Play again",
+      action: () => { resetLevel(1); resetLevel(2); level = 1; }
+    });
+  } else {
+    const other = level === 1 ? 2 : 1;
+    openModal({
+      burst: "★ LEVEL COMPLETE ★", title: "Kudos!",
+      text: `You scored ${levelScore(level)} of 5 in this level. Try ${other === 2 ? "next level" : "Level 1"}!`,
+      go: other === 2 ? "Try next level" : "Try Level 1",
+      action: () => { level = other; }
+    });
+  }
+}
+
+function resetLevel(l) {
+  state[l].forEach(s => { s.guess = ""; s.status = null; s.revealed = false; s.peeked = false; });
+  celebrated[l] = false;
+}
+
+document.getElementById("modal-go").addEventListener("click", () => {
+  overlay.hidden = true;
+  if (modalAction) modalAction();
+  render();
+  window.scrollTo({ top: 0, behavior: "smooth" });
+});
+document.getElementById("modal-close").addEventListener("click", () => { overlay.hidden = true; });
+overlay.addEventListener("click", e => { if (e.target === overlay) overlay.hidden = true; });
+document.addEventListener("keydown", e => { if (e.key === "Escape") overlay.hidden = true; });
+
+document.querySelectorAll(".levels button").forEach(b =>
+  b.addEventListener("click", () => { level = +b.dataset.level; render(); }));
+document.getElementById("reset").addEventListener("click", () => { resetLevel(level); render(); });
+
+render();
+</script>
+
+</body>
+</html>
