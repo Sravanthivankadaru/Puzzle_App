@@ -117,6 +117,18 @@ h1 { font-family: var(--f-display); font-weight: 800; font-size: clamp(34px, 6vw
 .box-wrap .word { position: absolute; right: -6px; top: 0; font-size: 22px; }
 .tiny { font-size: 12px; vertical-align: middle; letter-spacing: .02em; }
 .gg { font-size: 19px; line-height: 1.35; }
+/* highlights: lights sit high in the tile, ground at the bottom */
+.tile:has(.sky) { place-items: stretch; padding-top: 10px; }
+.sky { display: grid; grid-template-rows: auto auto 1fr; justify-items: center; gap: 2px; min-height: 140px; }
+.lamps { display: flex; gap: 8px; font-size: 26px; line-height: 1; }
+.ground { align-self: end; width: 100%; border-bottom: 3px solid var(--tile-ink); }
+/* level 3 internals */
+.waves { font-size: 26px; letter-spacing: -.08em; color: #1f5fbf; line-height: .8; }
+.sea { color: #1f5fbf; }
+.down { display: flex; align-items: center; gap: 14px; }
+.down .col { display: grid; font-size: 24px; line-height: 1.05; }
+.down .arrow { font-size: 44px; color: var(--accent); line-height: 1; }
+.two { color: var(--accent); }
 footer { color: var(--muted); font-size: 14px; text-align: center; }
 
 /* guess form */
@@ -177,11 +189,12 @@ footer { color: var(--muted); font-size: 14px; text-align: center; }
     <div class="levels" role="tablist" aria-label="Choose a level">
       <button role="tab" id="tab-1" aria-selected="true" data-level="1">Level 1 · Easy</button>
       <button role="tab" id="tab-2" aria-selected="false" data-level="2">Level 2 · Tricky</button>
+      <button role="tab" id="tab-3" aria-selected="false" data-level="3">Level 3 · Expert</button>
     </div>
     <div class="progress">
       <div class="dots" id="dots"></div>
       <span id="count">0 of 5 played</span>
-      <span class="scorechip" id="scorechip">Score 0 / 10</span>
+      <span class="scorechip" id="scorechip">Score 0 / 15</span>
       <button class="ghost" id="reset">Restart level</button>
     </div>
   </div>
@@ -213,8 +226,10 @@ const LEVELS = {
   1: {
     title: "Level 1", sub: "Warm-up words",
     puzzles: [
-      { tile: '<div class="stack big"><div class="over">STAND</div><div>I</div></div>',
-        answer: "I understand", why: "The letter I is under the word STAND." },
+      { tile: '<div class="sky" aria-label="A row of different lights and the word LIGHTS, placed high at the top of the box">'
+          + '<div class="lamps" aria-hidden="true"><span>💡</span><span>🔦</span><span>🕯️</span><span>🏮</span><span>🚦</span></div>'
+          + '<div class="mid">LIGHTS</div><div class="ground" aria-hidden="true"></div></div>',
+        answer: "Highlights", why: "The LIGHTS are placed high up at the top: high-lights." },
       { tile: '<div class="stack big"><div class="over">MIND</div><div>MATTER</div></div>',
         answer: "Mind over matter", why: "MIND is placed over MATTER." },
       { tile: '<div class="stack mid"><div>CYCLE</div><div>CYCLE</div><div>CYCLE</div></div>',
@@ -239,13 +254,34 @@ const LEVELS = {
       { tile: '<div class="mid"><span class="tiny">world</span> ALL</div>',
         answer: "It's a small world after all", why: "A small “world” comes first, with ALL after it." }
     ]
+  },
+  3: {
+    title: "Level 3", sub: "Expert eyes only",
+    puzzles: [
+      { tile: '<div class="stack big" aria-label="TRAVEL written over waves and the word SEAS">'
+          + '<div>TRAVEL</div><div class="waves" aria-hidden="true">~~~~~~~~</div><div class="sea">SEAS</div></div>',
+        answer: "Travel overseas", why: "TRAVEL sits over the waves of the SEAS: travel over seas." },
+      { tile: '<div class="stack big" aria-label="NO NO NO on top of a line, with RIGHT under the line">'
+          + '<div class="over row"><span>NO</span><span>NO</span><span>NO</span></div><div>RIGHT</div></div>',
+        answer: "Right under your nose", why: "Three NOs sound like “your nose”, and RIGHT sits right under them." },
+      { tile: '<div class="stack big" aria-label="STAND on top, TRY 2 underneath">'
+          + '<div class="over">STAND</div><div>TRY <span class="two">2</span></div></div>',
+        answer: "Try to understand", why: "TRY 2 (“try to”) sits under STAND: try to under-stand." },
+      { tile: '<div class="down" aria-label="SETTLE written from top to bottom, with an arrow pointing down">'
+          + '<div class="col"><span>S</span><span>E</span><span>T</span><span>T</span><span>L</span><span>E</span></div>'
+          + '<div class="arrow" aria-hidden="true">↓</div></div>',
+        answer: "Settle down", why: "SETTLE is written going down." },
+      { tile: '<div class="stack mid" aria-label="GOOD GOOD on top, 2 IGNORE underneath">'
+          + '<div class="row"><span>GOOD</span><span>GOOD</span></div><div><span class="two">2</span> IGNORE</div></div>',
+        answer: "Too good to ignore", why: "Two GOODs sound like “too good”, and 2 IGNORE is “to ignore”." }
+    ]
   }
 };
 
 /* Accepted answers (compared after removing punctuation, spaces and case). */
 const ALTS = {
   1: [
-    ["i understand", "understand"],
+    ["highlights", "high lights", "highlight", "high light"],
     ["mind over matter"],
     ["tricycle", "a tricycle", "tri cycle"],
     ["side by side"],
@@ -257,6 +293,13 @@ const ALTS = {
     ["think outside the box", "think outside of the box", "thinking outside the box"],
     ["reading between the lines", "read between the lines"],
     ["its a small world after all", "small world after all", "it is a small world after all", "a small world after all"]
+  ],
+  3: [
+    ["travel overseas", "travel over seas", "travelling overseas", "traveling overseas"],
+    ["right under your nose", "right under my nose", "under your nose"],
+    ["try to understand", "try 2 understand"],
+    ["settle down"],
+    ["too good to ignore", "2 good 2 ignore", "too good 2 ignore"]
   ]
 };
 const norm = s => s.toLowerCase().replace(/&/g, "and").replace(/[^a-z0-9]/g, "");
@@ -265,7 +308,7 @@ const norm = s => s.toLowerCase().replace(/&/g, "and").replace(/[^a-z0-9]/g, "")
    in any order. So "out of the box thinking" counts for "think outside the box". */
 const KEYS = {
   1: [
-    [["understand", "understood", "under stand"]],
+    [["highlights", "highlight", "high lights", "high light", "lights high"]],
     [["mind"], ["matter"]],
     [["tricycle", "tri cycle", "tricycles", "three cycles"]],
     [["side by side", "side-by-side"]],
@@ -277,6 +320,13 @@ const KEYS = {
     [["think", "thinking", "thought"], ["outside", "out of"], ["box"]],
     [["read", "reading"], ["between"], ["line", "lines"]],
     [["small world"], ["after all"]]
+  ],
+  3: [
+    [["travel", "travels", "travelling", "traveling"], ["overseas", "over seas", "over sea", "oversea"]],
+    [["under", "underneath", "beneath"], ["nose"]],
+    [["try", "trying"], ["understand", "under stand"]],
+    [["settle", "settling", "settled"], ["down"]],
+    [["too", "two", "2"], ["good"], ["ignore", "ignored"]]
   ]
 };
 const words = s => " " + s.toLowerCase().replace(/&/g, " and ").replace(/[^a-z0-9]+/g, " ").trim() + " ";
@@ -288,9 +338,14 @@ function isCorrect(l, i, guess) {
 
 let level = 1;
 /* per puzzle: { guess, status: null|'correct'|'wrong', revealed } */
+const LEVEL_IDS = Object.keys(LEVELS).map(Number);
+const MAX_SCORE = LEVEL_IDS.reduce((n, l) => n + LEVELS[l].puzzles.length, 0);
 const state = {};
-[1, 2].forEach(l => state[l] = LEVELS[l].puzzles.map(() => ({ guess: "", status: null, revealed: false })));
-const celebrated = { 1: false, 2: false };
+const celebrated = {};
+LEVEL_IDS.forEach(l => {
+  state[l] = LEVELS[l].puzzles.map(() => ({ guess: "", status: null, revealed: false }));
+  celebrated[l] = false;
+});
 
 const grid = document.getElementById("grid");
 const dots = document.getElementById("dots");
@@ -414,14 +469,14 @@ function render(focusId) {
   const n = state[level].filter(played).length;
   dots.innerHTML = state[level].map(s => `<i class="${played(s) ? "on" : ""}"></i>`).join("");
   count.textContent = `${n} of ${L.puzzles.length} played`;
-  document.getElementById("scorechip").textContent = `Score ${totalScore()} / 10`;
+  document.getElementById("scorechip").textContent = `Score ${totalScore()} / ${MAX_SCORE}`;
   shakeKey = null;
   if (focusId) { const el = document.getElementById(focusId); if (el) { el.focus(); if (el.select && el.tagName === "INPUT") el.select(); } }
 }
 
 /* A point for each puzzle answered correctly before its answer was revealed. */
 const levelScore = l => state[l].filter(s => s.status === "correct" && !s.peeked).length;
-const totalScore = () => levelScore(1) + levelScore(2);
+const totalScore = () => LEVEL_IDS.reduce((n, l) => n + levelScore(l), 0);
 let modalAction = null;
 /* Only the card that was just answered wrong shakes, and only once. */
 let shakeKey = null;
@@ -445,27 +500,29 @@ function openModal({ burst, title, text, score, breakdown, go, action }) {
 function checkDone() {
   if (celebrated[level] || !state[level].every(played)) return;
   celebrated[level] = true;
-  const allDone = [1, 2].every(l => state[l].every(played));
-  if (allDone) {
+  const unfinished = LEVEL_IDS.filter(l => !state[l].every(played));
+  if (!unfinished.length) {
     const t = totalScore();
-    const msg = t === 10 ? "Perfect score! You're a rebus master."
-              : t >= 8 ? "Excellent! Sharp eyes and a quick mind."
-              : t >= 5 ? "Good job! You cracked more than half."
+    const msg = t === MAX_SCORE ? "Perfect score! You're a rebus master."
+              : t >= MAX_SCORE * 0.8 ? "Excellent! Sharp eyes and a quick mind."
+              : t >= MAX_SCORE / 2 ? "Good job! You cracked more than half."
               : "Nice try! Play again and beat your score.";
     openModal({
       burst: "★ GAME COMPLETE ★", title: "Kudos!", text: msg,
-      score: `${t}<small> / 10</small>`,
-      breakdown: `<span>Level 1: ${levelScore(1)} / 5</span><span>Level 2: ${levelScore(2)} / 5</span>`,
+      score: `${t}<small> / ${MAX_SCORE}</small>`,
+      breakdown: LEVEL_IDS.map(l => `<span>Level ${l}: ${levelScore(l)} / ${LEVELS[l].puzzles.length}</span>`).join(""),
       go: "Play again",
-      action: () => { resetLevel(1); resetLevel(2); level = 1; }
+      action: () => { LEVEL_IDS.forEach(resetLevel); level = LEVEL_IDS[0]; }
     });
   } else {
-    const other = level === 1 ? 2 : 1;
+    /* Send the player to the next unfinished level after this one, else the first unfinished one. */
+    const next = unfinished.find(l => l > level) ?? unfinished[0];
+    const isNext = next === level + 1;
     openModal({
       burst: "★ LEVEL COMPLETE ★", title: "Kudos!",
-      text: `You scored ${levelScore(level)} of 5 in this level. Try ${other === 2 ? "next level" : "Level 1"}!`,
-      go: other === 2 ? "Try next level" : "Try Level 1",
-      action: () => { level = other; }
+      text: `You scored ${levelScore(level)} of ${LEVELS[level].puzzles.length} in this level. Try ${isNext ? "the next level" : "Level " + next}!`,
+      go: isNext ? "Try next level" : `Try Level ${next}`,
+      action: () => { level = next; }
     });
   }
 }
