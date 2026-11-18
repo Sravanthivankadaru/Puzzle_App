@@ -117,13 +117,18 @@ h1 { font-family: var(--f-display); font-weight: 800; font-size: clamp(34px, 6vw
 .box-wrap .word { position: absolute; right: -6px; top: 0; font-size: 22px; }
 .tiny { font-size: 12px; vertical-align: middle; letter-spacing: .02em; }
 .gg { font-size: 19px; line-height: 1.35; }
+/* highlights: lights sit high in the tile, ground at the bottom */
+.tile:has(.sky) { place-items: stretch; padding-top: 10px; }
+.sky { display: grid; grid-template-rows: auto auto 1fr; justify-items: center; gap: 2px; min-height: 140px; }
+.lamps { display: flex; gap: 8px; font-size: 26px; line-height: 1; }
+.ground { align-self: end; width: 100%; border-bottom: 3px solid var(--tile-ink); }
 /* level 3 internals */
-.half { display: inline-block; font-size: 46px; line-height: 1; clip-path: inset(0 0 50% 0); }
-.cross { display: grid; grid-template-columns: repeat(5, 1.15em); grid-template-rows: repeat(5, 1.15em); font-size: 24px; place-items: center; }
-.mixed span { display: inline-block; transform: rotate(var(--r, 0deg)) translateY(var(--y, 0px)); margin: 0 1px; }
-.nope { position: relative; display: inline-block; padding: 0 .3em; }
-.nope::before { content: ""; position: absolute; inset: -4px; border: 4px solid #d23434; border-radius: 50%; }
-.nope::after { content: ""; position: absolute; left: calc(50% - 2px); top: -4px; bottom: -4px; width: 4px; background: #d23434; transform: rotate(45deg); }
+.waves { font-size: 26px; letter-spacing: -.08em; color: #1f5fbf; line-height: .8; }
+.sea { color: #1f5fbf; }
+.down { display: flex; align-items: center; gap: 14px; }
+.down .col { display: grid; font-size: 24px; line-height: 1.05; }
+.down .arrow { font-size: 44px; color: var(--accent); line-height: 1; }
+.two { color: var(--accent); }
 footer { color: var(--muted); font-size: 14px; text-align: center; }
 
 /* guess form */
@@ -221,8 +226,10 @@ const LEVELS = {
   1: {
     title: "Level 1", sub: "Warm-up words",
     puzzles: [
-      { tile: '<div class="stack big"><div class="over">STAND</div><div>I</div></div>',
-        answer: "I understand", why: "The letter I is under the word STAND." },
+      { tile: '<div class="sky" aria-label="A row of different lights and the word LIGHTS, placed high at the top of the box">'
+          + '<div class="lamps" aria-hidden="true"><span>💡</span><span>🔦</span><span>🕯️</span><span>🏮</span><span>🚦</span></div>'
+          + '<div class="mid">LIGHTS</div><div class="ground" aria-hidden="true"></div></div>',
+        answer: "Highlights", why: "The LIGHTS are placed high up at the top: high-lights." },
       { tile: '<div class="stack big"><div class="over">MIND</div><div>MATTER</div></div>',
         answer: "Mind over matter", why: "MIND is placed over MATTER." },
       { tile: '<div class="stack mid"><div>CYCLE</div><div>CYCLE</div><div>CYCLE</div></div>',
@@ -251,23 +258,22 @@ const LEVELS = {
   3: {
     title: "Level 3", sub: "Expert eyes only",
     puzzles: [
-      { tile: '<div class="half" aria-label="Only the top half of the word SECRET is visible">SECRET</div>',
-        answer: "Top secret", why: "Only the top of the word SECRET is showing." },
-      { tile: '<div class="big">XQQME</div>',
-        answer: "Excuse me", why: "Say it out loud: X-Q-Q-ME sounds like “ex-cuse me”." },
-      { tile: '<div class="cross" aria-label="The word ROADS written across and down, crossing at the letter A">'
-          + '<span style="grid-area:1/3">R</span><span style="grid-area:2/3">O</span>'
-          + '<span style="grid-area:3/1">R</span><span style="grid-area:3/2">O</span><span style="grid-area:3/3">A</span>'
-          + '<span style="grid-area:3/4">D</span><span style="grid-area:3/5">S</span>'
-          + '<span style="grid-area:4/3">D</span><span style="grid-area:5/3">S</span></div>',
-        answer: "Crossroads", why: "Two ROADS cross each other." },
-      { tile: '<div class="mixed mid" aria-label="The letters S L E F N I G E, tilted and jumbled">'
-          + '<span style="--r:-14deg">S</span><span style="--r:9deg;--y:5px">L</span><span style="--r:-6deg;--y:-4px">E</span>'
-          + '<span style="--r:16deg">F</span><span style="--r:-11deg;--y:6px">N</span><span style="--r:7deg;--y:-5px">I</span>'
-          + '<span style="--r:-18deg">G</span><span style="--r:12deg;--y:4px">E</span></div>',
-        answer: "Mixed feelings", why: "The letters of FEELINGS are all mixed up." },
-      { tile: '<div class="stack"><div class="mid">TIIIIIIIME</div><div class="big"><span class="nope" aria-label="C, crossed out">C</span></div></div>',
-        answer: "Long time no see", why: "A long TIME, and NO “C” (see)." }
+      { tile: '<div class="stack big" aria-label="TRAVEL written over waves and the word SEAS">'
+          + '<div>TRAVEL</div><div class="waves" aria-hidden="true">~~~~~~~~</div><div class="sea">SEAS</div></div>',
+        answer: "Travel overseas", why: "TRAVEL sits over the waves of the SEAS: travel over seas." },
+      { tile: '<div class="stack big" aria-label="NO NO NO on top of a line, with RIGHT under the line">'
+          + '<div class="over row"><span>NO</span><span>NO</span><span>NO</span></div><div>RIGHT</div></div>',
+        answer: "Right under your nose", why: "Three NOs sound like “your nose”, and RIGHT sits right under them." },
+      { tile: '<div class="stack big" aria-label="STAND on top, TRY 2 underneath">'
+          + '<div class="over">STAND</div><div>TRY <span class="two">2</span></div></div>',
+        answer: "Try to understand", why: "TRY 2 (“try to”) sits under STAND: try to under-stand." },
+      { tile: '<div class="down" aria-label="SETTLE written from top to bottom, with an arrow pointing down">'
+          + '<div class="col"><span>S</span><span>E</span><span>T</span><span>T</span><span>L</span><span>E</span></div>'
+          + '<div class="arrow" aria-hidden="true">↓</div></div>',
+        answer: "Settle down", why: "SETTLE is written going down." },
+      { tile: '<div class="stack mid" aria-label="GOOD GOOD on top, 2 IGNORE underneath">'
+          + '<div class="row"><span>GOOD</span><span>GOOD</span></div><div><span class="two">2</span> IGNORE</div></div>',
+        answer: "Too good to ignore", why: "Two GOODs sound like “too good”, and 2 IGNORE is “to ignore”." }
     ]
   }
 };
@@ -275,7 +281,7 @@ const LEVELS = {
 /* Accepted answers (compared after removing punctuation, spaces and case). */
 const ALTS = {
   1: [
-    ["i understand", "understand"],
+    ["highlights", "high lights", "highlight", "high light"],
     ["mind over matter"],
     ["tricycle", "a tricycle", "tri cycle"],
     ["side by side"],
@@ -289,11 +295,11 @@ const ALTS = {
     ["its a small world after all", "small world after all", "it is a small world after all", "a small world after all"]
   ],
   3: [
-    ["top secret"],
-    ["excuse me", "scuse me"],
-    ["crossroads", "crossroad", "cross roads", "at a crossroads"],
-    ["mixed feelings", "mixed up feelings"],
-    ["long time no see"]
+    ["travel overseas", "travel over seas", "travelling overseas", "traveling overseas"],
+    ["right under your nose", "right under my nose", "under your nose"],
+    ["try to understand", "try 2 understand"],
+    ["settle down"],
+    ["too good to ignore", "2 good 2 ignore", "too good 2 ignore"]
   ]
 };
 const norm = s => s.toLowerCase().replace(/&/g, "and").replace(/[^a-z0-9]/g, "");
@@ -302,7 +308,7 @@ const norm = s => s.toLowerCase().replace(/&/g, "and").replace(/[^a-z0-9]/g, "")
    in any order. So "out of the box thinking" counts for "think outside the box". */
 const KEYS = {
   1: [
-    [["understand", "understood", "under stand"]],
+    [["highlights", "highlight", "high lights", "high light", "lights high"]],
     [["mind"], ["matter"]],
     [["tricycle", "tri cycle", "tricycles", "three cycles"]],
     [["side by side", "side-by-side"]],
@@ -316,11 +322,11 @@ const KEYS = {
     [["small world"], ["after all"]]
   ],
   3: [
-    [["top"], ["secret", "secrets"]],
-    [["excuse", "scuse"], ["me"]],
-    [["crossroads", "crossroad", "cross roads", "cross road", "crossing roads"]],
-    [["mixed", "mixed up", "jumbled"], ["feeling", "feelings"]],
-    [["long"], ["time"], ["no"], ["see", "sea", "c"]]
+    [["travel", "travels", "travelling", "traveling"], ["overseas", "over seas", "over sea", "oversea"]],
+    [["under", "underneath", "beneath"], ["nose"]],
+    [["try", "trying"], ["understand", "under stand"]],
+    [["settle", "settling", "settled"], ["down"]],
+    [["too", "two", "2"], ["good"], ["ignore", "ignored"]]
   ]
 };
 const words = s => " " + s.toLowerCase().replace(/&/g, " and ").replace(/[^a-z0-9]+/g, " ").trim() + " ";
